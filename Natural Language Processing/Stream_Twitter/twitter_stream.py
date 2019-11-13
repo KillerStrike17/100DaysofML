@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import json
 import time
+import re
 
 class Authenticate_Twitter():
 
@@ -66,8 +67,17 @@ class Clean_Data():
 	#					return it to the incoming function
 	#	friends_to_df:This function is used to extract the user data from the list
 	#					and store in a dataframe and return it to the calling functions
+	#	stream_tweet_to_df: This function will convert the incoming stream of tweet to dataframe
+	#					and return a dataframe
 	# ###
-	
+
+	def clean_text(self, data):
+		try:
+			return ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", data).split())
+		except Exception as e:
+			print("Exception at class Clean_Data over function clean_text:" ,e)
+
+
 	def tweets_to_df(self,data):
 
 		# ###	
@@ -86,14 +96,18 @@ class Clean_Data():
 		try:
 			df = pd.DataFrame()
 			for tweet in data:
-				df = df.append([[tweet.text,len(tweet.text),tweet.created_at,tweet.source,tweet.favorite_count,tweet.retweet_count,	tweet.coordinates,tweet.geo,tweet.lang]])
+				#print(tweet,"\n\n\n\n\n")
+				df = df.append([[self.clean_text(tweet.full_text),len(self.clean_text(tweet.full_text)),tweet.created_at,tweet.source,tweet.favorite_count,tweet.retweet_count,	tweet.coordinates,tweet.geo,tweet.lang]],ignore_index = True)
+				#print(df)
 			df.columns = ['Tweet','Tweet Length','Date of Creation','Source','Likes','Retweets','Coordinates','Geo','Language']
+			print(df)
+			with open('user_tweets.csv','a') as f:
+				df.to_csv(f,header  = True,index = False)
 			return df
 
 		except Exception as e:
 			print("Exception at Clean Data class over tweets_to_df function:", e)
 
-	
 	def friends_to_df(self, friendlist):
 
 		# ###	
@@ -115,10 +129,24 @@ class Clean_Data():
 			for friend in friendlist:
 				df = df.append([[friend.name,friend.screen_name]])
 			df.columns = ['Name','Screen_Name']
+			with open('friend_list.csv','a') as f:
+				df.to_csv(f,header  = False,index = False)
 			return df
 
 		except Exception as e:
 			print("Exception at Clean Data class over friends _to_df function:", e)
+	
+	def stream_tweet_to_df(self, tweet,data_frame):
+		try:
+			# df = pd.dataframe()
+			all_data = json.loads(tweet)
+			data_frame = pd.DataFrame([[all_data["text"],len(all_data["text"]),all_data["created_at"],all_data["source"],all_data["favorite_count"],all_data["retweet_count"],	all_data["coordinates"],all_data["geo"],all_data["lang"]]])
+			print(data_frame)
+			with open('stream_tweet.csv','a') as f:
+				data_frame.to_csv(f,header  = False,index = False)
+
+		except Exception as e:
+			print("Exception at Clean_Data class at function stream_tweet_to_df",e)
 
 class Twitter_Listener(StreamListener):
 
@@ -153,6 +181,8 @@ class Twitter_Listener(StreamListener):
 		# ###
 
 		self.clean_data = Clean_Data()
+		self.df = pd.DataFrame()
+		#columns = ['Tweet','Tweet Length','Date of Creation','Source','Likes','Retweets','Coordinates','Geo','Language']
 	
 	def on_data(self,data):
 
@@ -171,7 +201,10 @@ class Twitter_Listener(StreamListener):
 		# ###
 
 		try:
-			tweet = self.clean_data.tweets_to_df(data)
+			self.df = self.clean_data.stream_tweet_to_df(data,self.df)
+			#print(self.df)
+			return self.df
+
 
 		except Exception as e:
 			print("Exception at on_data function: ",e)
@@ -249,8 +282,7 @@ class Stream_Tweets():
 			twitter_listener = Twitter_Listener()
 			auth = self.auth_twitter.authenticate_twitter_api()
 			stream=Stream(auth,twitter_listener)
-			stream.filter(track =hashed_list)
-
+			print(stream.filter(track =hashed_list))
 		except Exception as e:
 			print("Exception at Stream_Tweet Class: ",e)
 
@@ -311,7 +343,7 @@ class User_Tweets():
 		# ###
 
 		tweets = []
-		for tweet in self.exception_handler.rate_limit_handler(Cursor(self.twitter_client.user_timeline,id = twitter_username).items(num_tweets)):
+		for tweet in self.exception_handler.rate_limit_handler(Cursor(self.twitter_client.user_timeline,id = twitter_username,tweet_mode='extended').items(num_tweets)):
 			tweets.append(tweet)
 			#print(dir(tweet))
 		return tweets
