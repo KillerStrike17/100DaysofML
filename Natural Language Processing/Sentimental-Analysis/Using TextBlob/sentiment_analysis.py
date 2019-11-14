@@ -41,6 +41,7 @@ class Analyze_Tweet():
                 
         except Exception as e:
             print("Exception as Analyze_Tweet Class on function Analyze_Sentiment: ",e)
+            return "Nil"
         
 # a = Analyze_Tweet()
 # print(a.Analyze_Sentiment("you are awesome"))

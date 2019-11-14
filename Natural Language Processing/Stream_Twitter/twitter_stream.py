@@ -8,6 +8,7 @@ import numpy as np
 import json
 import time
 import re
+import os.path
 
 class Authenticate_Twitter():
 
@@ -96,13 +97,25 @@ class Clean_Data():
 		try:
 			df = pd.DataFrame()
 			for tweet in data:
-				#print(tweet,"\n\n\n\n\n")
-				df = df.append([[self.clean_text(tweet.full_text),len(self.clean_text(tweet.full_text)),tweet.created_at,tweet.source,tweet.favorite_count,tweet.retweet_count,	tweet.coordinates,tweet.geo,tweet.lang]],ignore_index = True)
+				# print(tweet,"\n\n\n\n\n")
+				retweet_check = tweet._json.get("retweeted_status")
+				if None != retweet_check:
+					df = df.append([[self.clean_text(str(retweet_check.get("full_text"))),len(self.clean_text(str(retweet_check.get("full_text")))),tweet.created_at,tweet.source,tweet.favorite_count,tweet.retweet_count,	tweet.coordinates,tweet.geo,tweet.lang]],ignore_index = True)
+
+				else:
+					df = df.append([[self.clean_text(tweet.full_text),len(self.clean_text(tweet.full_text)),tweet.created_at,tweet.source,tweet.favorite_count,tweet.retweet_count,	tweet.coordinates,tweet.geo,tweet.lang]],ignore_index = True)
+				
 				#print(df)
 			df.columns = ['Tweet','Tweet Length','Date of Creation','Source','Likes','Retweets','Coordinates','Geo','Language']
-			print(df)
+			#print(df)
+			
 			with open('user_tweets.csv','a') as f:
-				df.to_csv(f,header  = True,index = False)
+				fileEmpty = os.stat('user_tweets.csv').st_size == 0
+				if fileEmpty:
+					print("adding headers")
+					df.to_csv(f,header  = True,index = False,line_terminator = '\n')
+				else:
+					df.to_csv(f,header  = False,index = False,line_terminator = '\n')
 			return df
 
 		except Exception as e:
@@ -130,7 +143,8 @@ class Clean_Data():
 				df = df.append([[friend.name,friend.screen_name]])
 			df.columns = ['Name','Screen_Name']
 			with open('friend_list.csv','a') as f:
-				df.to_csv(f,header  = False,index = False)
+				df.to_csv(f,header  = False,index = False,line_terminator = '\n')
+			print (df)
 			return df
 
 		except Exception as e:
@@ -139,14 +153,15 @@ class Clean_Data():
 	def stream_tweet_to_df(self, tweet,data_frame):
 		try:
 			# df = pd.dataframe()
-			all_data = json.loads(tweet)
-			data_frame = pd.DataFrame([[all_data["text"],len(all_data["text"]),all_data["created_at"],all_data["source"],all_data["favorite_count"],all_data["retweet_count"],	all_data["coordinates"],all_data["geo"],all_data["lang"]]])
-			print(data_frame)
-			with open('stream_tweet.csv','a') as f:
-				data_frame.to_csv(f,header  = False,index = False)
+			print(tweet)
+			# all_data = json.loads(tweet)
+			# data_frame = pd.DataFrame([[all_data["text"],len(all_data["text"]),all_data["created_at"],all_data["source"],all_data["favorite_count"],all_data["retweet_count"],	all_data["coordinates"],all_data["geo"],all_data["lang"]]])
+			# # print(data_frame)
+			# with open('stream_tweet.csv','a') as f:
+			# 	data_frame.to_csv(f,header  = False,index = False,line_terminator= '\n')
 
 		except Exception as e:
-			print("Exception at Clean_Data class at function stream_tweet_to_df",e)
+			print("Exception at Clean_Data class at function stream_tweet_to_df: ",e)
 
 class Twitter_Listener(StreamListener):
 
@@ -203,7 +218,7 @@ class Twitter_Listener(StreamListener):
 		try:
 			self.df = self.clean_data.stream_tweet_to_df(data,self.df)
 			#print(self.df)
-			return self.df
+			# return self.df
 
 
 		except Exception as e:
@@ -281,7 +296,7 @@ class Stream_Tweets():
 		try:
 			twitter_listener = Twitter_Listener()
 			auth = self.auth_twitter.authenticate_twitter_api()
-			stream=Stream(auth,twitter_listener)
+			stream=Stream(auth,twitter_listener,tweet_mode = 'extended')
 			print(stream.filter(track =hashed_list))
 		except Exception as e:
 			print("Exception at Stream_Tweet Class: ",e)
@@ -409,4 +424,5 @@ class Exception_Handler():
 
 			# To sleep on RateLimit Exceed Error
 			except tweepy.RateLimitError:
+				print("Please wait for sometime")
 				time.sleep(15 * 60)
