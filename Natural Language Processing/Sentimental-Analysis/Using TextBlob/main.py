@@ -24,7 +24,7 @@ def check(sentiment):
 a = Analyze_Tweet()
 
 twitter_client = User_Tweets()
-tweets = twitter_client.get_user_timeline_tweet(10,"killerstrike17")
+tweets = twitter_client.get_user_timeline_tweet(2000,"realDonaldTrump")
 clean_data = Clean_Data()
 clean_data.tweets_to_df(tweets)
 df = pd.read_csv('user_tweets.csv')
