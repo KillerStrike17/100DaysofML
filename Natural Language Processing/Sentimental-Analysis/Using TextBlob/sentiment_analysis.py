@@ -43,7 +43,7 @@ class Analyze_Tweet():
             print("Exception as Analyze_Tweet Class on function Analyze_Sentiment: ",e)
             return "Nil"
         
-# a = Analyze_Tweet()
-# print(a.Analyze_Sentiment("you are awesome"))
-# print(a.Analyze_Sentiment("you are bad"))
-# print(a.Analyze_Sentiment("hi, how are you"))
+a = Analyze_Tweet()
+print("you are awesome:- ",a.Analyze_Sentiment("you are awesome"))
+print("you are bad:- ",a.Analyze_Sentiment("you are bad"))
+print("hi, how are you:- ", a.Analyze_Sentiment("hi, how are you"))
